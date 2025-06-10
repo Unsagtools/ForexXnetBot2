@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { tradingEngine } from "./tradingEngine";
+import { telegramBot } from "./telegramBot";
+import { encryption } from "./encryption";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -311,15 +313,185 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Ads Management API
+  app.get('/api/ads', isAuthenticated, async (req: any, res) => {
+    try {
+      const { position, isActive } = req.query;
+      const filters: any = {};
+      if (position) filters.position = position;
+      if (isActive !== undefined) filters.isActive = isActive === 'true';
+      
+      const ads = await storage.getAds(filters);
+      res.json(ads);
+    } catch (error) {
+      console.error("Error fetching ads:", error);
+      res.status(500).json({ message: "Failed to fetch ads" });
+    }
+  });
+
+  app.post('/api/ads', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.email?.includes('admin') && user?.subscriptionTier !== 'enterprise') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const ad = await storage.createAd(req.body);
+      res.json(ad);
+    } catch (error) {
+      console.error("Error creating ad:", error);
+      res.status(500).json({ message: "Failed to create ad" });
+    }
+  });
+
+  app.patch('/api/ads/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.email?.includes('admin') && user?.subscriptionTier !== 'enterprise') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const { id } = req.params;
+      const ad = await storage.updateAd(parseInt(id), req.body);
+      res.json(ad);
+    } catch (error) {
+      console.error("Error updating ad:", error);
+      res.status(500).json({ message: "Failed to update ad" });
+    }
+  });
+
+  app.delete('/api/ads/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.email?.includes('admin') && user?.subscriptionTier !== 'enterprise') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const { id } = req.params;
+      await storage.deleteAd(parseInt(id));
+      res.json({ message: "Ad deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting ad:", error);
+      res.status(500).json({ message: "Failed to delete ad" });
+    }
+  });
+
+  // Telegram Bot API
+  app.post('/api/telegram/send-message', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.email?.includes('admin') && user?.subscriptionTier !== 'enterprise') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const { message, parseMode } = req.body;
+      const result = await telegramBot.sendMessage(message, { parseMode });
+      res.json(result);
+    } catch (error) {
+      console.error("Error sending Telegram message:", error);
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  app.post('/api/telegram/post-signal', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.email?.includes('admin') && user?.subscriptionTier !== 'enterprise') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      await telegramBot.postTradingSignal(req.body);
+      res.json({ message: "Signal posted successfully" });
+    } catch (error) {
+      console.error("Error posting signal:", error);
+      res.status(500).json({ message: "Failed to post signal" });
+    }
+  });
+
+  app.post('/api/telegram/post-news', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.email?.includes('admin') && user?.subscriptionTier !== 'enterprise') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      await telegramBot.postMarketNews(req.body);
+      res.json({ message: "News posted successfully" });
+    } catch (error) {
+      console.error("Error posting news:", error);
+      res.status(500).json({ message: "Failed to post news" });
+    }
+  });
+
+  // Security & Encryption API
+  app.post('/api/security/encrypt', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.email?.includes('admin') && user?.subscriptionTier !== 'enterprise') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const { data, purpose } = req.body;
+      const result = await encryption.encryptData(data, purpose);
+      res.json(result);
+    } catch (error) {
+      console.error("Error encrypting data:", error);
+      res.status(500).json({ message: "Failed to encrypt data" });
+    }
+  });
+
+  app.get('/api/security/logs', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.email?.includes('admin') && user?.subscriptionTier !== 'enterprise') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const { severity, eventType } = req.query;
+      const filters: any = {};
+      if (severity) filters.severity = severity;
+      if (eventType) filters.eventType = eventType;
+      
+      const logs = await storage.getSecurityLogs(filters);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching security logs:", error);
+      res.status(500).json({ message: "Failed to fetch security logs" });
+    }
+  });
+
   const httpServer = createServer(app);
 
-  // Start signal generation on server startup
+  // Initialize systems on startup
   setTimeout(async () => {
     try {
+      // Initialize Telegram bot
+      if (telegramBot.isConfigured()) {
+        await telegramBot.initialize();
+        console.log("Telegram bot initialized");
+      }
+      
+      // Generate initial signals
       await tradingEngine.generateSignals();
       console.log("Initial signals generated");
     } catch (error) {
-      console.error("Error generating initial signals:", error);
+      console.error("Error initializing systems:", error);
     }
   }, 5000);
 
