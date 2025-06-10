@@ -14,6 +14,11 @@ import {
   telegramPosts,
   encryptionKeys,
   securityLogs,
+  trialSignals,
+  userPerformance,
+  signalVerification,
+  realTimeMarket,
+  premiumFeatures,
   type User,
   type UpsertUser,
   type TradingSignal,
@@ -44,6 +49,16 @@ import {
   type InsertEncryptionKey,
   type SecurityLog,
   type InsertSecurityLog,
+  type TrialSignal,
+  type InsertTrialSignal,
+  type UserPerformance,
+  type InsertUserPerformance,
+  type SignalVerification,
+  type InsertSignalVerification,
+  type RealTimeMarket,
+  type InsertRealTimeMarket,
+  type PremiumFeature,
+  type InsertPremiumFeature,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, count, avg, sum, sql } from "drizzle-orm";
@@ -131,6 +146,26 @@ export interface IStorage {
   // Security logs
   getSecurityLogs(filters?: { severity?: string; eventType?: string }): Promise<SecurityLog[]>;
   createSecurityLog(log: InsertSecurityLog): Promise<SecurityLog>;
+  
+  // Trial system
+  startUserTrial(userId: string): Promise<void>;
+  getUserTrialStatus(userId: string): Promise<{ isActive: boolean; daysLeft: number; performance: any }>;
+  recordTrialSignal(userId: string, signalId: number, entryPrice: string): Promise<TrialSignal>;
+  updateTrialSignalResult(id: number, exitPrice: string, profitLoss: string, pips: number): Promise<void>;
+  getUserPerformance(userId: string): Promise<UserPerformance | undefined>;
+  updateUserPerformance(userId: string, performance: Partial<UserPerformance>): Promise<void>;
+  
+  // Signal verification
+  verifySignal(signalId: number, verification: InsertSignalVerification): Promise<SignalVerification>;
+  getSignalVerifications(signalId?: number): Promise<SignalVerification[]>;
+  
+  // Real-time market data
+  updateRealTimeMarket(data: InsertRealTimeMarket[]): Promise<void>;
+  getRealTimeMarket(pair?: string): Promise<RealTimeMarket[]>;
+  
+  // Premium features
+  getPremiumFeatures(tier?: string): Promise<PremiumFeature[]>;
+  checkFeatureAccess(userId: string, featureName: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -619,6 +654,220 @@ export class DatabaseStorage implements IStorage {
       .values(log)
       .returning();
     return newLog;
+  }
+
+  // Trial system implementation
+  async startUserTrial(userId: string): Promise<void> {
+    const trialEndDate = new Date();
+    trialEndDate.setDate(trialEndDate.getDate() + 7); // 7-day trial
+    
+    await db
+      .update(users)
+      .set({
+        subscriptionTier: "trial",
+        trialStartDate: new Date(),
+        trialEndDate: trialEndDate,
+        isTrialActive: true,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+
+    // Initialize user performance tracking
+    const existingPerformance = await db
+      .select()
+      .from(userPerformance)
+      .where(eq(userPerformance.userId, userId))
+      .limit(1);
+
+    if (existingPerformance.length === 0) {
+      await db.insert(userPerformance).values({
+        userId,
+        totalSignals: 0,
+        winningSignals: 0,
+        losingSignals: 0,
+        winRate: 0,
+        totalProfit: "0",
+        averagePips: 0,
+        bestTrade: "0",
+        worstTrade: "0",
+        riskScore: 5
+      });
+    }
+  }
+
+  async getUserTrialStatus(userId: string): Promise<{ isActive: boolean; daysLeft: number; performance: any }> {
+    const user = await this.getUser(userId);
+    if (!user || !user.trialStartDate || !user.trialEndDate) {
+      return { isActive: false, daysLeft: 0, performance: null };
+    }
+
+    const now = new Date();
+    const endDate = new Date(user.trialEndDate);
+    const daysLeft = Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    const isActive = user.isTrialActive && daysLeft > 0;
+
+    // Get user performance
+    const performance = await this.getUserPerformance(userId);
+
+    return {
+      isActive,
+      daysLeft,
+      performance: performance || {
+        totalSignals: 0,
+        winRate: 0,
+        totalProfit: "0",
+        averagePips: 0
+      }
+    };
+  }
+
+  async recordTrialSignal(userId: string, signalId: number, entryPrice: string): Promise<TrialSignal> {
+    const signal = await db.select().from(tradingSignals).where(eq(tradingSignals.id, signalId)).limit(1);
+    if (signal.length === 0) {
+      throw new Error("Signal not found");
+    }
+
+    const [trialSignal] = await db
+      .insert(trialSignals)
+      .values({
+        userId,
+        signalId,
+        entryPrice,
+        confidence: signal[0].confidence,
+        status: "active"
+      })
+      .returning();
+
+    return trialSignal;
+  }
+
+  async updateTrialSignalResult(id: number, exitPrice: string, profitLoss: string, pips: number): Promise<void> {
+    const status = parseFloat(profitLoss) >= 0 ? "won" : "lost";
+    
+    await db
+      .update(trialSignals)
+      .set({
+        exitPrice,
+        profitLoss,
+        pips,
+        status,
+        exitTime: new Date()
+      })
+      .where(eq(trialSignals.id, id));
+
+    // Update user performance
+    const trialSignal = await db.select().from(trialSignals).where(eq(trialSignals.id, id)).limit(1);
+    if (trialSignal.length > 0) {
+      await this.updateUserPerformanceStats(trialSignal[0].userId, status, parseFloat(profitLoss), pips);
+    }
+  }
+
+  private async updateUserPerformanceStats(userId: string, result: string, profitLoss: number, pips: number): Promise<void> {
+    const performance = await this.getUserPerformance(userId);
+    if (!performance) return;
+
+    const totalSignals = performance.totalSignals + 1;
+    const winningSignals = performance.winningSignals + (result === "won" ? 1 : 0);
+    const losingSignals = performance.losingSignals + (result === "lost" ? 1 : 0);
+    const winRate = (winningSignals / totalSignals) * 100;
+    const newTotalProfit = parseFloat(performance.totalProfit) + profitLoss;
+    const averagePips = ((performance.averagePips * (totalSignals - 1)) + pips) / totalSignals;
+    const bestTrade = Math.max(parseFloat(performance.bestTrade), profitLoss);
+    const worstTrade = Math.min(parseFloat(performance.worstTrade), profitLoss);
+
+    await db
+      .update(userPerformance)
+      .set({
+        totalSignals,
+        winningSignals,
+        losingSignals,
+        winRate,
+        totalProfit: newTotalProfit.toString(),
+        averagePips,
+        bestTrade: bestTrade.toString(),
+        worstTrade: worstTrade.toString(),
+        updatedAt: new Date()
+      })
+      .where(eq(userPerformance.userId, userId));
+  }
+
+  async getUserPerformance(userId: string): Promise<UserPerformance | undefined> {
+    const result = await db
+      .select()
+      .from(userPerformance)
+      .where(eq(userPerformance.userId, userId))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateUserPerformance(userId: string, performance: Partial<UserPerformance>): Promise<void> {
+    await db
+      .update(userPerformance)
+      .set({ ...performance, updatedAt: new Date() })
+      .where(eq(userPerformance.userId, userId));
+  }
+
+  // Signal verification for authenticity
+  async verifySignal(signalId: number, verification: InsertSignalVerification): Promise<SignalVerification> {
+    const [result] = await db
+      .insert(signalVerification)
+      .values({ ...verification, signalId })
+      .returning();
+    return result;
+  }
+
+  async getSignalVerifications(signalId?: number): Promise<SignalVerification[]> {
+    let query = db.select().from(signalVerification);
+    if (signalId) {
+      query = query.where(eq(signalVerification.signalId, signalId)) as any;
+    }
+    return await query.orderBy(desc(signalVerification.createdAt));
+  }
+
+  // Real-time market data
+  async updateRealTimeMarket(data: InsertRealTimeMarket[]): Promise<void> {
+    if (data.length === 0) return;
+    await db.insert(realTimeMarket).values(data);
+  }
+
+  async getRealTimeMarket(pair?: string): Promise<RealTimeMarket[]> {
+    let query = db.select().from(realTimeMarket);
+    if (pair) {
+      query = query.where(eq(realTimeMarket.pair, pair)) as any;
+    }
+    return await query.orderBy(desc(realTimeMarket.timestamp)).limit(100);
+  }
+
+  // Premium features
+  async getPremiumFeatures(tier?: string): Promise<PremiumFeature[]> {
+    let query = db.select().from(premiumFeatures).where(eq(premiumFeatures.isActive, true));
+    if (tier) {
+      query = query.where(eq(premiumFeatures.tierRequired, tier)) as any;
+    }
+    return await query.orderBy(premiumFeatures.priority);
+  }
+
+  async checkFeatureAccess(userId: string, featureName: string): Promise<boolean> {
+    const user = await this.getUser(userId);
+    if (!user) return false;
+
+    const feature = await db
+      .select()
+      .from(premiumFeatures)
+      .where(and(
+        eq(premiumFeatures.featureName, featureName),
+        eq(premiumFeatures.isActive, true)
+      ))
+      .limit(1);
+
+    if (feature.length === 0) return true; // Feature doesn't exist, allow access
+
+    const userTier = user.subscriptionTier || "free";
+    const requiredTier = feature[0].tierRequired;
+
+    // Tier hierarchy: trial < free < pro < enterprise
+    const tierHierarchy = { trial: 1, free: 2, pro: 3, enterprise: 4 };
+    return tierHierarchy[userTier as keyof typeof tierHierarchy] >= tierHierarchy[requiredTier as keyof typeof tierHierarchy];
   }
 }
 

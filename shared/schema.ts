@@ -32,7 +32,13 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  subscriptionTier: varchar("subscription_tier").default("free"), // free, pro, enterprise
+  subscriptionTier: varchar("subscription_tier").default("trial"), // trial, free, pro, enterprise
+  trialStartDate: timestamp("trial_start_date").defaultNow(),
+  trialEndDate: timestamp("trial_end_date"),
+  isTrialActive: boolean("is_trial_active").default(true),
+  signalsReceived: integer("signals_received").default(0),
+  winRate: real("win_rate").default(0),
+  totalProfit: decimal("total_profit", { precision: 10, scale: 2 }).default("0"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -340,3 +346,81 @@ export const insertSecurityLogSchema = createInsertSchema(securityLogs).omit({
   id: true,
   createdAt: true,
 });
+
+// Trial system tables
+export const trialSignals = pgTable("trial_signals", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  signalId: integer("signal_id").notNull(),
+  entryPrice: decimal("entry_price", { precision: 10, scale: 5 }).notNull(),
+  exitPrice: decimal("exit_price", { precision: 10, scale: 5 }),
+  profitLoss: decimal("profit_loss", { precision: 10, scale: 2 }),
+  status: varchar("status").default("active"), // active, won, lost
+  entryTime: timestamp("entry_time").defaultNow(),
+  exitTime: timestamp("exit_time"),
+  pips: real("pips"),
+  confidence: integer("confidence").notNull(),
+});
+
+export const userPerformance = pgTable("user_performance", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  totalSignals: integer("total_signals").default(0),
+  winningSignals: integer("winning_signals").default(0),
+  losingSignals: integer("losing_signals").default(0),
+  winRate: real("win_rate").default(0),
+  totalProfit: decimal("total_profit", { precision: 10, scale: 2 }).default("0"),
+  averagePips: real("average_pips").default(0),
+  bestTrade: decimal("best_trade", { precision: 10, scale: 2 }).default("0"),
+  worstTrade: decimal("worst_trade", { precision: 10, scale: 2 }).default("0"),
+  riskScore: integer("risk_score").default(5), // 1-10 scale
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const signalVerification = pgTable("signal_verification", {
+  id: serial("id").primaryKey(),
+  signalId: integer("signal_id").notNull(),
+  verificationSource: varchar("verification_source").notNull(), // live_market, historical_data
+  actualEntryPrice: decimal("actual_entry_price", { precision: 10, scale: 5 }),
+  actualExitPrice: decimal("actual_exit_price", { precision: 10, scale: 5 }),
+  marketConditions: jsonb("market_conditions"),
+  newsImpact: text("news_impact"),
+  technicalAnalysis: jsonb("technical_analysis"),
+  verified: boolean("verified").default(false),
+  accuracy: real("accuracy"), // percentage accuracy
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const realTimeMarket = pgTable("real_time_market", {
+  id: serial("id").primaryKey(),
+  pair: varchar("pair").notNull(),
+  bid: decimal("bid", { precision: 10, scale: 5 }).notNull(),
+  ask: decimal("ask", { precision: 10, scale: 5 }).notNull(),
+  spread: real("spread").notNull(),
+  volume: integer("volume").default(0),
+  change24h: real("change_24h").default(0),
+  high24h: decimal("high_24h", { precision: 10, scale: 5 }),
+  low24h: decimal("low_24h", { precision: 10, scale: 5 }),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+export const premiumFeatures = pgTable("premium_features", {
+  id: serial("id").primaryKey(),
+  featureName: varchar("feature_name").notNull(),
+  description: text("description"),
+  tierRequired: varchar("tier_required").notNull(), // trial, pro, enterprise
+  isActive: boolean("is_active").default(true),
+  usageLimit: integer("usage_limit"), // per day/month
+  priority: integer("priority").default(1),
+});
+
+export type TrialSignal = typeof trialSignals.$inferSelect;
+export type InsertTrialSignal = typeof trialSignals.$inferInsert;
+export type UserPerformance = typeof userPerformance.$inferSelect;
+export type InsertUserPerformance = typeof userPerformance.$inferInsert;
+export type SignalVerification = typeof signalVerification.$inferSelect;
+export type InsertSignalVerification = typeof signalVerification.$inferInsert;
+export type RealTimeMarket = typeof realTimeMarket.$inferSelect;
+export type InsertRealTimeMarket = typeof realTimeMarket.$inferInsert;
+export type PremiumFeature = typeof premiumFeatures.$inferSelect;
+export type InsertPremiumFeature = typeof premiumFeatures.$inferInsert;
