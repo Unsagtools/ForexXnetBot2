@@ -16,6 +16,7 @@ import BusinessPanel from "./pages/business-panel";
 import Documentation from "./pages/documentation";
 import Projects from "./pages/projects";
 import ActivityLogs from "./pages/activity-logs";
+import Trial from "./pages/trial";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();

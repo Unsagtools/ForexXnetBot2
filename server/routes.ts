@@ -476,6 +476,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Trial System API Routes
+  app.post('/api/trial/start', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.startUserTrial(userId);
+      res.json({ message: "Trial started successfully" });
+    } catch (error) {
+      console.error("Error starting trial:", error);
+      res.status(500).json({ message: "Failed to start trial" });
+    }
+  });
+
+  app.get('/api/trial/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const status = await storage.getUserTrialStatus(userId);
+      res.json(status);
+    } catch (error) {
+      console.error("Error fetching trial status:", error);
+      res.status(500).json({ message: "Failed to fetch trial status" });
+    }
+  });
+
+  app.post('/api/trial/record-signal', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { signalId, entryPrice } = req.body;
+      
+      const trialSignal = await storage.recordTrialSignal(userId, signalId, entryPrice);
+      res.json(trialSignal);
+    } catch (error) {
+      console.error("Error recording trial signal:", error);
+      res.status(500).json({ message: "Failed to record trial signal" });
+    }
+  });
+
+  app.get('/api/trial/verifications', isAuthenticated, async (req: any, res) => {
+    try {
+      const verifications = await storage.getSignalVerifications();
+      res.json(verifications);
+    } catch (error) {
+      console.error("Error fetching verifications:", error);
+      res.status(500).json({ message: "Failed to fetch verifications" });
+    }
+  });
+
+  app.get('/api/trial/performance/:userId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const requestUserId = req.user.claims.sub;
+      
+      // Users can only view their own performance unless admin
+      if (userId !== requestUserId) {
+        const user = await storage.getUser(requestUserId);
+        if (!user?.email?.includes('admin') && user?.subscriptionTier !== 'enterprise') {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+      
+      const performance = await storage.getUserPerformance(userId);
+      res.json(performance);
+    } catch (error) {
+      console.error("Error fetching performance:", error);
+      res.status(500).json({ message: "Failed to fetch performance" });
+    }
+  });
+
+  // Real-time market data endpoints
+  app.get('/api/market/realtime', isAuthenticated, async (req: any, res) => {
+    try {
+      const { pair } = req.query;
+      const marketData = await storage.getRealTimeMarket(pair);
+      res.json(marketData);
+    } catch (error) {
+      console.error("Error fetching real-time market data:", error);
+      res.status(500).json({ message: "Failed to fetch market data" });
+    }
+  });
+
+  // Premium features endpoints
+  app.get('/api/features', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const tier = user?.subscriptionTier || "free";
+      
+      const features = await storage.getPremiumFeatures(tier);
+      res.json(features);
+    } catch (error) {
+      console.error("Error fetching features:", error);
+      res.status(500).json({ message: "Failed to fetch features" });
+    }
+  });
+
+  app.get('/api/features/check/:featureName', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { featureName } = req.params;
+      
+      const hasAccess = await storage.checkFeatureAccess(userId, featureName);
+      res.json({ hasAccess });
+    } catch (error) {
+      console.error("Error checking feature access:", error);
+      res.status(500).json({ message: "Failed to check feature access" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Initialize systems on startup
