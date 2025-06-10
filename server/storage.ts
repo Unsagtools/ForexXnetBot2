@@ -97,6 +97,28 @@ export interface IStorage {
   // System settings
   getSystemSettings(): Promise<SystemSetting[]>;
   updateSystemSetting(key: string, value: string): Promise<SystemSetting>;
+  
+  // Ads system
+  getAds(filters?: { position?: string; isActive?: boolean }): Promise<Ad[]>;
+  createAd(ad: InsertAd): Promise<Ad>;
+  updateAd(id: number, ad: Partial<Ad>): Promise<Ad>;
+  deleteAd(id: number): Promise<void>;
+  incrementAdImpressions(id: number): Promise<void>;
+  incrementAdClicks(id: number): Promise<void>;
+  
+  // Telegram posts
+  getTelegramPosts(filters?: { status?: string; postType?: string }): Promise<TelegramPost[]>;
+  createTelegramPost(post: InsertTelegramPost): Promise<TelegramPost>;
+  updateTelegramPost(id: number, post: Partial<TelegramPost>): Promise<TelegramPost>;
+  
+  // Encryption keys
+  getEncryptionKeys(): Promise<EncryptionKey[]>;
+  createEncryptionKey(key: InsertEncryptionKey): Promise<EncryptionKey>;
+  updateEncryptionKey(id: number, key: Partial<EncryptionKey>): Promise<EncryptionKey>;
+  
+  // Security logs
+  getSecurityLogs(filters?: { severity?: string; eventType?: string }): Promise<SecurityLog[]>;
+  createSecurityLog(log: InsertSecurityLog): Promise<SecurityLog>;
 }
 
 export class DatabaseStorage implements IStorage {

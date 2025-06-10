@@ -237,3 +237,106 @@ export const insertSystemSettingSchema = createInsertSchema(systemSettings).omit
   id: true,
   updatedAt: true,
 });
+
+export const ads = pgTable("ads", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  targetUrl: text("target_url").notNull(),
+  adType: varchar("ad_type", { length: 50 }).notNull(), // banner, popup, native, video
+  position: varchar("position", { length: 50 }).notNull(), // header, sidebar, footer, inline
+  isActive: boolean("is_active").default(true),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  impressions: integer("impressions").default(0),
+  clicks: integer("clicks").default(0),
+  budget: decimal("budget", { precision: 10, scale: 2 }),
+  costPerClick: decimal("cost_per_click", { precision: 10, scale: 2 }),
+  targetAudience: text("target_audience").array(),
+  priority: integer("priority").default(1),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const telegramPosts = pgTable("telegram_posts", {
+  id: serial("id").primaryKey(),
+  messageId: varchar("message_id", { length: 255 }),
+  channelId: varchar("channel_id", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  postType: varchar("post_type", { length: 50 }).notNull(), // news, signal, analysis, market_update
+  mediaUrl: text("media_url"),
+  scheduledAt: timestamp("scheduled_at"),
+  postedAt: timestamp("posted_at"),
+  status: varchar("status", { length: 50 }).default("pending"), // pending, posted, failed
+  engagement: jsonb("engagement").default({}), // views, reactions, shares
+  source: varchar("source", { length: 255 }), // news source or signal origin
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const encryptionKeys = pgTable("encryption_keys", {
+  id: serial("id").primaryKey(),
+  keyId: varchar("key_id", { length: 255 }).notNull().unique(),
+  keyType: varchar("key_type", { length: 50 }).notNull(), // AES, RSA, ECDSA
+  encryptedKey: text("encrypted_key").notNull(),
+  keyHash: varchar("key_hash", { length: 255 }).notNull(),
+  algorithm: varchar("algorithm", { length: 100 }).notNull(),
+  keySize: integer("key_size").notNull(),
+  purpose: varchar("purpose", { length: 255 }).notNull(), // data, communication, auth
+  isActive: boolean("is_active").default(true),
+  expiresAt: timestamp("expires_at"),
+  rotationSchedule: varchar("rotation_schedule", { length: 50 }), // daily, weekly, monthly
+  lastRotated: timestamp("last_rotated"),
+  accessLevel: integer("access_level").default(1), // 1-5 security levels
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const securityLogs = pgTable("security_logs", {
+  id: serial("id").primaryKey(),
+  eventType: varchar("event_type", { length: 100 }).notNull(),
+  severity: varchar("severity", { length: 20 }).notNull(), // low, medium, high, critical
+  source: varchar("source", { length: 255 }).notNull(),
+  userId: varchar("user_id", { length: 255 }),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  details: jsonb("details").default({}),
+  threatLevel: integer("threat_level").default(0), // 0-10 scale
+  actionTaken: text("action_taken"),
+  resolved: boolean("resolved").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Ad = typeof ads.$inferSelect;
+export type InsertAd = typeof ads.$inferInsert;
+export type TelegramPost = typeof telegramPosts.$inferSelect;
+export type InsertTelegramPost = typeof telegramPosts.$inferInsert;
+export type EncryptionKey = typeof encryptionKeys.$inferSelect;
+export type InsertEncryptionKey = typeof encryptionKeys.$inferInsert;
+export type SecurityLog = typeof securityLogs.$inferSelect;
+export type InsertSecurityLog = typeof securityLogs.$inferInsert;
+
+export const insertAdSchema = createInsertSchema(ads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTelegramPostSchema = createInsertSchema(telegramPosts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEncryptionKeySchema = createInsertSchema(encryptionKeys).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSecurityLogSchema = createInsertSchema(securityLogs).omit({
+  id: true,
+  createdAt: true,
+});
