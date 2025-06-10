@@ -322,7 +322,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.to) conditions.push(lte(activityLogs.createdAt, filters.to));
     
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      query = query.where(and(...conditions)) as any;
     }
     
     const offset = ((filters?.page || 1) - 1) * 50;
@@ -426,7 +426,7 @@ export class DatabaseStorage implements IStorage {
   async getNotifications(userId?: string): Promise<Notification[]> {
     let query = db.select().from(notifications);
     if (userId) {
-      query = query.where(eq(notifications.userId, userId));
+      query = query.where(eq(notifications.userId, userId)) as any;
     }
     return await query.orderBy(desc(notifications.createdAt));
   }
