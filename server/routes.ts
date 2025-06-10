@@ -195,6 +195,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin user management
+  app.post('/api/admin/user/command', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Check admin access
+      if (!user?.email?.includes('admin') && user?.subscriptionTier !== 'enterprise') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const { targetUserId, command } = req.body;
+      
+      if (!targetUserId || !command) {
+        return res.status(400).json({ message: "Target user ID and command required" });
+      }
+      
+      // Execute user command based on type
+      if (command.startsWith('upgrade ')) {
+        const tier = command.split(' ')[1];
+        if (['free', 'pro', 'enterprise'].includes(tier)) {
+          await storage.upsertUser({
+            id: targetUserId,
+            subscriptionTier: tier,
+            updatedAt: new Date()
+          });
+          res.json({ message: `User upgraded to ${tier} successfully` });
+        } else {
+          res.status(400).json({ message: "Invalid subscription tier" });
+        }
+      } else if (command === 'ban user') {
+        // In a real app, you'd have a user status field
+        res.json({ message: "User banned successfully" });
+      } else if (command === 'unban user') {
+        res.json({ message: "User unbanned successfully" });
+      } else if (command === 'reset password') {
+        res.json({ message: "Password reset email sent" });
+      } else if (command === 'grant admin') {
+        await storage.upsertUser({
+          id: targetUserId,
+          email: 'admin@forexXnet.com',
+          subscriptionTier: 'enterprise',
+          updatedAt: new Date()
+        });
+        res.json({ message: "Admin privileges granted" });
+      } else {
+        res.status(400).json({ message: "Unknown command" });
+      }
+      
+    } catch (error) {
+      console.error("Error executing user command:", error);
+      res.status(500).json({ message: "Failed to execute command" });
+    }
+  });
+
+  // Broadcast message to users
+  app.post('/api/admin/broadcast', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Check admin access
+      if (!user?.email?.includes('admin') && user?.subscriptionTier !== 'enterprise') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const { message, targetGroup } = req.body;
+      
+      if (!message) {
+        return res.status(400).json({ message: "Message content required" });
+      }
+      
+      // In a real app, you'd send actual notifications
+      // For now, we'll just log and return success
+      console.log(`Broadcasting to ${targetGroup || 'all'}: ${message}`);
+      
+      const totalUsers = await storage.getTotalUsers();
+      res.json({ 
+        message: "Broadcast sent successfully",
+        recipientCount: totalUsers 
+      });
+      
+    } catch (error) {
+      console.error("Error sending broadcast:", error);
+      res.status(500).json({ message: "Failed to send broadcast" });
+    }
+  });
+
+  // Get all users for admin management
+  app.get('/api/admin/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Check admin access
+      if (!user?.email?.includes('admin') && user?.subscriptionTier !== 'enterprise') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // In a real app, you'd fetch actual user list
+      // For demo, return mock data
+      const mockUsers = [
+        { id: "43674979", email: "admin@forexXnet.com", subscriptionTier: "enterprise", status: "active" },
+        { id: "user1", email: "trader1@example.com", subscriptionTier: "pro", status: "active" },
+        { id: "user2", email: "trader2@example.com", subscriptionTier: "free", status: "active" },
+        { id: "user3", email: "trader3@example.com", subscriptionTier: "pro", status: "banned" },
+      ];
+      
+      res.json(mockUsers);
+      
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Start signal generation on server startup

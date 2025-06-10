@@ -113,6 +113,29 @@
   .accuracy-fill {
     @apply bg-secondary h-2 rounded-full;
   }
+
+  /* Trading platform specific styles */
+  .trading-card {
+    @apply bg-card border border-border shadow-lg backdrop-blur-sm;
+    background: rgba(var(--card), 0.8);
+  }
+
+  .signal-card {
+    @apply p-6 rounded-lg border border-border backdrop-blur-sm;
+    background: rgba(var(--card), 0.6);
+  }
+
+  .stats-card {
+    @apply bg-gradient-to-br from-card to-card border border-border shadow-lg backdrop-blur-sm;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/90;
+  }
 }
 
 @layer utilities {

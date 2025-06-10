@@ -53,7 +53,7 @@ export interface User {
   firstName?: string;
   lastName?: string;
   profileImageUrl?: string;
-  subscriptionTier: string;
-  createdAt: string;
-  updatedAt: string;
+  subscriptionTier?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
