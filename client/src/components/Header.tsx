@@ -21,13 +21,20 @@ export default function Header() {
               <span className="text-xl font-bold">ForexXnet</span>
               <span className="bg-secondary/20 text-secondary text-xs px-2 py-1 rounded-full">AI Powered</span>
             </div>
-            <nav className="hidden md:flex space-x-8 ml-8">
+            <nav className="hidden md:flex space-x-6 ml-8">
               <a href="/dashboard" className="text-foreground hover:text-primary transition-colors">Dashboard</a>
               <a href="/signals" className="text-muted-foreground hover:text-primary transition-colors">Signals</a>
               <a href="/learning" className="text-muted-foreground hover:text-primary transition-colors">Learning</a>
               <a href="/analytics" className="text-muted-foreground hover:text-primary transition-colors">Analytics</a>
+              <a href="/projects" className="text-muted-foreground hover:text-primary transition-colors">Projects</a>
+              <a href="/documentation" className="text-muted-foreground hover:text-primary transition-colors">Docs</a>
               {(user?.email?.includes('admin') || user?.subscriptionTier === 'enterprise') && (
-                <a href="/admin" className="text-purple-400 hover:text-purple-300 transition-colors">Admin</a>
+                <>
+                  <a href="/admin" className="text-purple-400 hover:text-purple-300 transition-colors">Admin</a>
+                  <a href="/admin/commands" className="text-purple-400 hover:text-purple-300 transition-colors">Commands</a>
+                  <a href="/admin/business" className="text-purple-400 hover:text-purple-300 transition-colors">Business</a>
+                  <a href="/admin/activity" className="text-purple-400 hover:text-purple-300 transition-colors">Activity</a>
+                </>
               )}
             </nav>
           </div>

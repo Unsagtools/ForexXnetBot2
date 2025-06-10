@@ -11,6 +11,11 @@ import Signals from "./pages/signals";
 import Learning from "./pages/learning";
 import Analytics from "./pages/analytics";
 import AdminPanel from "./pages/admin-panel";
+import AdminCommands from "./pages/admin-commands";
+import BusinessPanel from "./pages/business-panel";
+import Documentation from "./pages/documentation";
+import Projects from "./pages/projects";
+import ActivityLogs from "./pages/activity-logs";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -35,6 +40,11 @@ function Router() {
           <Route path="/learning" component={Learning} />
           <Route path="/analytics" component={Analytics} />
           <Route path="/admin" component={AdminPanel} />
+          <Route path="/admin/commands" component={AdminCommands} />
+          <Route path="/admin/business" component={BusinessPanel} />
+          <Route path="/admin/activity" component={ActivityLogs} />
+          <Route path="/documentation" component={Documentation} />
+          <Route path="/projects" component={Projects} />
         </>
       )}
       <Route component={NotFound} />
