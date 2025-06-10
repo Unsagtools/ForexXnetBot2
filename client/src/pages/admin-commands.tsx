@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Terminal, Plus, Edit, Trash2, Send, Users, Settings, Broadcast, Shield } from "lucide-react";
+import { Terminal, Plus, Edit, Trash2, Send, Users, Settings, Radio, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 
@@ -32,7 +32,7 @@ export default function AdminCommands() {
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const { toast } = useToast();
 
-  const { data: commands = [], isLoading } = useQuery({
+  const { data: commands = [], isLoading } = useQuery<AdminCommand[]>({
     queryKey: ["/api/admin/commands"],
   });
 
@@ -77,7 +77,7 @@ export default function AdminCommands() {
     },
   });
 
-  const filteredCommands = commands.filter((cmd: AdminCommand) => 
+  const filteredCommands = commands.filter((cmd) => 
     selectedCategory === "all" || cmd.category === selectedCategory
   );
 
@@ -85,7 +85,7 @@ export default function AdminCommands() {
     switch (category) {
       case "user": return <Users className="h-4 w-4" />;
       case "admin": return <Shield className="h-4 w-4" />;
-      case "broadcast": return <Broadcast className="h-4 w-4" />;
+      case "broadcast": return <Radio className="h-4 w-4" />;
       case "system": return <Settings className="h-4 w-4" />;
       default: return <Terminal className="h-4 w-4" />;
     }
@@ -286,7 +286,7 @@ export default function AdminCommands() {
                 onClick={() => broadcastMutation.mutate(broadcastMessage)}
                 disabled={!broadcastMessage.trim()}
               >
-                <Broadcast className="h-4 w-4 mr-2" />
+                <Radio className="h-4 w-4 mr-2" />
                 Send Broadcast
               </Button>
             </CardContent>
