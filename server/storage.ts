@@ -16,7 +16,7 @@ import {
   type InsertLearningContent,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, gte, lte, count, avg, sum } from "drizzle-orm";
+import { eq, desc, and, gte, lte, count, avg, sum, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
