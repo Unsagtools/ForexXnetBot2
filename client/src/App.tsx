@@ -7,6 +7,10 @@ import { useAuth } from "@/hooks/useAuth";
 import Dashboard from "@/pages/dashboard";
 import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
+import Signals from "@/pages/signals";
+import Learning from "@/pages/learning";
+import Analytics from "@/pages/analytics";
+import AdminPanel from "@/pages/admin-panel";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -27,6 +31,10 @@ function Router() {
         <>
           <Route path="/" component={Dashboard} />
           <Route path="/dashboard" component={Dashboard} />
+          <Route path="/signals" component={Signals} />
+          <Route path="/learning" component={Learning} />
+          <Route path="/analytics" component={Analytics} />
+          <Route path="/admin" component={AdminPanel} />
         </>
       )}
       <Route component={NotFound} />
