@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(222, 84%, 5%);
+  --foreground: hsl(210, 40%, 98%);
+  --muted: hsl(215, 25%, 16%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --popover: hsl(222, 84%, 5%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --card: hsl(220, 13%, 18%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --border: hsl(215, 25%, 27%);
+  --input: hsl(215, 25%, 27%);
+  --primary: hsl(217, 91%, 60%);
+  --primary-foreground: hsl(222, 84%, 5%);
+  --secondary: hsl(151, 55%, 42%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --accent: hsl(217, 91%, 60%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 63%, 31%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(217, 91%, 60%);
+  --radius: 0.75rem;
+  
+  /* Trading specific colors */
+  --success: hsl(151, 55%, 42%);
+  --danger: hsl(348, 75%, 47%);
+  --warning: hsl(43, 89%, 38%);
+  --info: hsl(217, 91%, 60%);
+  
+  /* Dark theme colors matching design */
+  --dark-bg: hsl(222, 84%, 5%);
+  --dark-surface: hsl(220, 13%, 18%);
+  --dark-border: hsl(215, 25%, 27%);
+}
+
+.dark {
+  --background: hsl(222, 84%, 5%);
+  --foreground: hsl(210, 40%, 98%);
+  --muted: hsl(215, 25%, 16%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --popover: hsl(222, 84%, 5%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --card: hsl(220, 13%, 18%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --border: hsl(215, 25%, 27%);
+  --input: hsl(215, 25%, 27%);
+  --primary: hsl(217, 91%, 60%);
+  --primary-foreground: hsl(222, 84%, 5%);
+  --secondary: hsl(151, 55%, 42%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --accent: hsl(217, 91%, 60%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 63%, 31%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(217, 91%, 60%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  }
+  
+  html {
+    @apply dark;
+  }
+}
+
+@layer components {
+  .trading-card {
+    @apply bg-card border border-border rounded-xl p-6 hover:border-primary/50 transition-all duration-200;
+  }
+  
+  .signal-card {
+    @apply border border-border rounded-lg p-4 hover:border-secondary/50 transition-all duration-200;
+  }
+  
+  .signal-card:hover {
+    transform: translateY(-2px);
+  }
+  
+  .stats-card {
+    @apply bg-card border border-border rounded-xl p-6;
+  }
+  
+  .btn-primary {
+    @apply bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-4 py-2 rounded-lg transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary hover:bg-secondary/90 text-secondary-foreground font-medium px-4 py-2 rounded-lg transition-colors;
+  }
+  
+  .btn-danger {
+    @apply bg-destructive hover:bg-destructive/90 text-destructive-foreground font-medium px-4 py-2 rounded-lg transition-colors;
+  }
+  
+  .live-indicator {
+    @apply w-2 h-2 bg-secondary rounded-full animate-pulse;
+  }
+  
+  .accuracy-bar {
+    @apply w-full bg-muted rounded-full h-2;
+  }
+  
+  .accuracy-fill {
+    @apply bg-secondary h-2 rounded-full;
+  }
+}
+
+@layer utilities {
+  .text-success {
+    color: hsl(151, 55%, 42%);
+  }
+  
+  .text-danger {
+    color: hsl(348, 75%, 47%);
+  }
+  
+  .text-warning {
+    color: hsl(43, 89%, 38%);
+  }
+  
+  .bg-success {
+    background-color: hsl(151, 55%, 42%);
+  }
+  
+  .bg-danger {
+    background-color: hsl(348, 75%, 47%);
+  }
+  
+  .bg-warning {
+    background-color: hsl(43, 89%, 38%);
+  }
+  
+  .border-success {
+    border-color: hsl(151, 55%, 42%);
+  }
+  
+  .border-danger {
+    border-color: hsl(348, 75%, 47%);
+  }
+}
