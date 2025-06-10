@@ -10,6 +10,10 @@ import {
   projects,
   notifications,
   systemSettings,
+  ads,
+  telegramPosts,
+  encryptionKeys,
+  securityLogs,
   type User,
   type UpsertUser,
   type TradingSignal,
@@ -32,6 +36,14 @@ import {
   type InsertNotification,
   type SystemSetting,
   type InsertSystemSetting,
+  type Ad,
+  type InsertAd,
+  type TelegramPost,
+  type InsertTelegramPost,
+  type EncryptionKey,
+  type InsertEncryptionKey,
+  type SecurityLog,
+  type InsertSecurityLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, count, avg, sum, sql } from "drizzle-orm";
@@ -480,6 +492,133 @@ export class DatabaseStorage implements IStorage {
       .where(eq(systemSettings.key, key))
       .returning();
     return updatedSetting;
+  }
+
+  // Ads system
+  async getAds(filters?: { position?: string; isActive?: boolean }): Promise<Ad[]> {
+    let query = db.select().from(ads);
+    
+    const conditions = [];
+    if (filters?.position) conditions.push(eq(ads.position, filters.position));
+    if (filters?.isActive !== undefined) conditions.push(eq(ads.isActive, filters.isActive));
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(desc(ads.priority), desc(ads.createdAt));
+  }
+
+  async createAd(ad: InsertAd): Promise<Ad> {
+    const [newAd] = await db
+      .insert(ads)
+      .values(ad)
+      .returning();
+    return newAd;
+  }
+
+  async updateAd(id: number, ad: Partial<Ad>): Promise<Ad> {
+    const [updatedAd] = await db
+      .update(ads)
+      .set({ ...ad, updatedAt: new Date() })
+      .where(eq(ads.id, id))
+      .returning();
+    return updatedAd;
+  }
+
+  async deleteAd(id: number): Promise<void> {
+    await db.delete(ads).where(eq(ads.id, id));
+  }
+
+  async incrementAdImpressions(id: number): Promise<void> {
+    await db
+      .update(ads)
+      .set({ impressions: sql`${ads.impressions} + 1` })
+      .where(eq(ads.id, id));
+  }
+
+  async incrementAdClicks(id: number): Promise<void> {
+    await db
+      .update(ads)
+      .set({ clicks: sql`${ads.clicks} + 1` })
+      .where(eq(ads.id, id));
+  }
+
+  // Telegram posts
+  async getTelegramPosts(filters?: { status?: string; postType?: string }): Promise<TelegramPost[]> {
+    let query = db.select().from(telegramPosts);
+    
+    const conditions = [];
+    if (filters?.status) conditions.push(eq(telegramPosts.status, filters.status));
+    if (filters?.postType) conditions.push(eq(telegramPosts.postType, filters.postType));
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(desc(telegramPosts.createdAt));
+  }
+
+  async createTelegramPost(post: InsertTelegramPost): Promise<TelegramPost> {
+    const [newPost] = await db
+      .insert(telegramPosts)
+      .values(post)
+      .returning();
+    return newPost;
+  }
+
+  async updateTelegramPost(id: number, post: Partial<TelegramPost>): Promise<TelegramPost> {
+    const [updatedPost] = await db
+      .update(telegramPosts)
+      .set({ ...post, updatedAt: new Date() })
+      .where(eq(telegramPosts.id, id))
+      .returning();
+    return updatedPost;
+  }
+
+  // Encryption keys
+  async getEncryptionKeys(): Promise<EncryptionKey[]> {
+    return await db.select().from(encryptionKeys).orderBy(desc(encryptionKeys.createdAt));
+  }
+
+  async createEncryptionKey(key: InsertEncryptionKey): Promise<EncryptionKey> {
+    const [newKey] = await db
+      .insert(encryptionKeys)
+      .values(key)
+      .returning();
+    return newKey;
+  }
+
+  async updateEncryptionKey(id: number, key: Partial<EncryptionKey>): Promise<EncryptionKey> {
+    const [updatedKey] = await db
+      .update(encryptionKeys)
+      .set({ ...key, updatedAt: new Date() })
+      .where(eq(encryptionKeys.id, id))
+      .returning();
+    return updatedKey;
+  }
+
+  // Security logs
+  async getSecurityLogs(filters?: { severity?: string; eventType?: string }): Promise<SecurityLog[]> {
+    let query = db.select().from(securityLogs);
+    
+    const conditions = [];
+    if (filters?.severity) conditions.push(eq(securityLogs.severity, filters.severity));
+    if (filters?.eventType) conditions.push(eq(securityLogs.eventType, filters.eventType));
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(desc(securityLogs.createdAt));
+  }
+
+  async createSecurityLog(log: InsertSecurityLog): Promise<SecurityLog> {
+    const [newLog] = await db
+      .insert(securityLogs)
+      .values(log)
+      .returning();
+    return newLog;
   }
 }
 
